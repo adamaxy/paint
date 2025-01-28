@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tavola da Disegno</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .toolbar {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .color-picker {
+            margin: 10px;
+        }
+        #canvas {
+            border: 1px solid #999;
+            background-color: white;
+            cursor: crosshair;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        button {
+            margin: 5px;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            margin: 5px;
+        }
+        .tool-button {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+        }
+        .tool-button.active {
+            background-color: #e0e0e0;
+            border-color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="tool-button" id="pencil" title="Matita">✏️</button>
+        <button class="tool-button" id="brush" title="Pennello">🖌️</button>
+        <button class="tool-button" id="eraser" title="Gomma">🧽</button>
+        <button class="tool-button" id="line" title="Linea">📏</button>
+        <button class="tool-button" id="rect" title="Rettangolo">⬜</button>
+        <button class="tool-button" id="circle" title="Cerchio">⭕</button>
+        <input type="color" id="colorPicker" class="color-picker" value="#000000">
+        <input type="number" id="lineWidth" min="1" max="50" value="5" title="Spessore linea">
+        <button id="clear">Pulisci</button>
+        <button id="save">Salva</button>
+    </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tools = document.querySelectorAll('.tool-button');
+        let isDrawing = false;
+        let currentTool = 'pencil';
+        let startX = 0;
+        let startY = 0;
+        let snapshot = null;
+
+        // Configurazione iniziale
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+
+        // Gestione degli strumentiiiii
+        tools.forEach(tool => {
+            tool.addEventListener('click', () => {
+                tools.forEach(t => t.classList.remove('active'));
+                tool.classList.add('active');
+                currentTool = tool.id;
+            });
+        });
+
+        // Gestione del colore
+        document.getElementById('colorPicker').addEventListener('input', (e) => {
+            ctx.strokeStyle = e.target.value;
+            ctx.fillStyle = e.target.value;
+        });
+
+        // Gestione dello spessore della linea
+        document.getElementById('lineWidth').addEventListener('input', (e) => {
+            ctx.lineWidth = e.target.value;
+        });
+
+        // Pulisci canvas
+        document.getElementById('clear').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Salva disegno
+        document.getElementById('save').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'disegno.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        // Eventi del mouse
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [startX, startY] = [e.offsetX, e.offsetY];
+            
+            if (['rect', 'circle', 'line'].includes(currentTool)) {
+                snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            }
+            
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            switch(currentTool) {
+                case 'pencil':
+                case 'brush':
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.stroke();
+                    break;
+                case 'eraser':
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.stroke();
+                    ctx.strokeStyle = document.getElementById('colorPicker').value;
+                    break;
+                case 'line':
+                case 'rect':
+                case 'circle':
+                    ctx.putImageData(snapshot, 0, 0);
+                    drawShape(e);
+                    break;
+            }
+        }
+
+        function drawShape(e) {
+            ctx.beginPath();
+            switch(currentTool) {
+                case 'line':
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    break;
+                case 'rect':
+                    const width = e.offsetX - startX;
+                    const height = e.offsetY - startY;
+                    ctx.strokeRect(startX, startY, width, height);
+                    break;
+                case 'circle':
+                    const radius = Math.sqrt(
+                        Math.pow(e.offsetX - startX, 2) + 
+                        Math.pow(e.offsetY - startY, 2)
+                    );
+                    ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+                    break;
+            }
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+
+        // Imposta lo strumento matita come attivo all'avvio
+        document.getElementById('pencil').classList.add('active');
+    </script>
+</body>
+</html>
