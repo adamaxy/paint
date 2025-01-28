@@ -20,6 +20,9 @@
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         .color-picker {
             margin: 10px;
@@ -27,18 +30,19 @@
         #canvas {
             border: 1px solid #999;
             background-color: white;
-            cursor: crosshair;
             border-radius: 4px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            touch-action: none; /* Disabilita il comportamento touch predefinito */
         }
         button {
             margin: 5px;
-            padding: 8px 15px;
+            padding: 10px 20px;
             border: none;
             border-radius: 4px;
             background-color: #4CAF50;
             color: white;
             cursor: pointer;
+            font-size: 16px;
         }
         button:hover {
             background-color: #45a049;
@@ -49,14 +53,15 @@
             margin: 5px;
         }
         .tool-button {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             margin: 5px;
             padding: 5px;
             border: 1px solid #ccc;
             border-radius: 4px;
             background-color: white;
             cursor: pointer;
+            font-size: 24px; /* Aumenta la dimensione del font per i pulsanti */
         }
         .tool-button.active {
             background-color: #e0e0e0;
@@ -94,7 +99,7 @@
         ctx.lineWidth = 5;
         ctx.lineCap = 'round';
 
-        // Gestione degli strumentiiiii
+        // Gestione degli strumenti
         tools.forEach(tool => {
             tool.addEventListener('click', () => {
                 tools.forEach(t => t.classList.remove('active'));
@@ -133,14 +138,27 @@
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
 
+        // Eventi touch
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Previene lo scrolling della pagina
+            startDrawing(e.touches[0]);
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Previene lo scrolling della pagina
+            draw(e.touches[0]);
+        });
+        canvas.addEventListener('touchend', stopDrawing);
+
         function startDrawing(e) {
             isDrawing = true;
-            [startX, startY] = [e.offsetX, e.offsetY];
-            
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+
             if (['rect', 'circle', 'line'].includes(currentTool)) {
                 snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
             }
-            
+
             ctx.beginPath();
             ctx.moveTo(startX, startY);
         }
@@ -148,15 +166,19 @@
         function draw(e) {
             if (!isDrawing) return;
 
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
             switch(currentTool) {
                 case 'pencil':
                 case 'brush':
-                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.lineTo(x, y);
                     ctx.stroke();
                     break;
                 case 'eraser':
                     ctx.strokeStyle = '#ffffff';
-                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.lineTo(x, y);
                     ctx.stroke();
                     ctx.strokeStyle = document.getElementById('colorPicker').value;
                     break;
@@ -164,27 +186,27 @@
                 case 'rect':
                 case 'circle':
                     ctx.putImageData(snapshot, 0, 0);
-                    drawShape(e);
+                    drawShape(x, y);
                     break;
             }
         }
 
-        function drawShape(e) {
+        function drawShape(x, y) {
             ctx.beginPath();
             switch(currentTool) {
                 case 'line':
                     ctx.moveTo(startX, startY);
-                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.lineTo(x, y);
                     break;
                 case 'rect':
-                    const width = e.offsetX - startX;
-                    const height = e.offsetY - startY;
+                    const width = x - startX;
+                    const height = y - startY;
                     ctx.strokeRect(startX, startY, width, height);
                     break;
                 case 'circle':
                     const radius = Math.sqrt(
-                        Math.pow(e.offsetX - startX, 2) + 
-                        Math.pow(e.offsetY - startY, 2)
+                        Math.pow(x - startX, 2) + 
+                        Math.pow(y - startY, 2)
                     );
                     ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
                     break;
