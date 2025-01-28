@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tavola da Disegno</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
             margin: 0;
@@ -86,6 +86,11 @@
     <canvas id="canvas"></canvas>
 
     <script>
+        // Inizializza la tua app qui
+        window.onload = function() {
+            Telegram.WebApp.init();
+        };
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const tools = document.querySelectorAll('.tool-button');
